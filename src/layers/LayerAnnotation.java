@@ -1,11 +1,13 @@
-package events;
+package layers;
 
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.Polygon;
 import java.awt.Rectangle;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Path2D;
+import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 
@@ -15,7 +17,7 @@ public class LayerAnnotation extends Layer {
 
 	public LayerAnnotation(int x, int y, AffineTransform at) {
 		super(x, y, at);
-		setLayerColor(new Color(0, 0, 0, 0));
+		clearLayer();
 	}
 
 	public void addMarquee(int x, int y) {
@@ -39,11 +41,40 @@ public class LayerAnnotation extends Layer {
 			g.draw(m.createTransformedShape(transform));
 		}
 	}
+	
+	public void dP(int x, int y, Color c) {
+		if (x < x_dim && y < y_dim && x>=0 && y>=0)
+			image.setRGB(x, y, c.getRGB());
+	}
+	public void dP(Point2D p, Color c){
+		dP((int)p.getX(),(int)p.getY(),c);
+	}
+	
+	public Color cP(int x, int y){
+		if (x < x_dim && y < y_dim && x>=0 && y>=0)
+			return new Color(image.getRGB(x, y));
+		return null;
+	}
+	public Color cP(double x, double y){
+		return cP((int)x,(int)y);
+	}
 
 	@Override
 	public void draw(Graphics2D g) {
 		g.drawImage(image, transform, null);
 		drawAnnotations(g);
+	}
+
+	@Override
+	public void undo() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void redo() {
+		// TODO Auto-generated method stub
+		
 	}
 
 }

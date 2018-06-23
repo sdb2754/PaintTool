@@ -1,5 +1,6 @@
-package events;
+package layers;
 
+import java.awt.AlphaComposite;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FileDialog;
@@ -18,12 +19,14 @@ import java.io.IOException;
 
 import javax.imageio.ImageIO;
 
-public class Layer {
+import events.Main;
+
+public abstract class Layer {
 
 	protected BufferedImage image;
-	public Graphics draw;
-	public Graphics2D draw2D;
-	private int x_dim, y_dim;
+	protected Graphics draw;
+	protected Graphics2D draw2D;
+	protected int x_dim, y_dim;
 
 	protected AffineTransform transform;
 
@@ -35,50 +38,50 @@ public class Layer {
 	public void setLayerSize(int x, int y) {
 		x_dim = x;
 		y_dim = y;
-		image = new BufferedImage(x, y, 2);
-		draw = image.getGraphics();
-		draw2D = (Graphics2D) draw;
-		Graphics2D g2d = image.createGraphics();
-		g2d.setColor(Color.WHITE);
-		g2d.fillRect(0, 0, x, y);
+		setImage(new BufferedImage(x, y, 2));
 	}
 
 	public Rectangle getLayerBounds() {
 
 		Point2D ul = transform.transform(new Point2D.Double(0, 0), null);
 		Point2D ll = transform.transform(new Point2D.Double(x_dim, y_dim), null);
-
 		return new Rectangle((int) ul.getX(), (int) ul.getY(), (int) (ll.getX() - ul.getX()),
 				(int) (ll.getY() - ul.getY()));
 	}
-
-	public void dP(int x, int y, Color c) {
-		if (x < x_dim && y < y_dim)
-			image.setRGB(x, y, c.getRGB());
+	
+	public void clearLayer() {
+		draw2D().setComposite(AlphaComposite.getInstance(AlphaComposite.CLEAR));
+		draw2D().fill(new Rectangle(0,0,x_dim,y_dim));
+		draw2D().setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER));
 	}
-
-	protected void setLayerColor(Color c) {
-		Dimension d = layerSize();
-		for (int i = 0; i < d.getWidth(); i++)
-			for (int j = 0; j < d.getHeight(); j++) {
-				dP(i, j, c);
-			}
+	public void setLayerColor(Color c) {
+		draw2D().setColor(c);
+		draw2D().fill(new Rectangle(0,0,x_dim,y_dim));
 	}
-
+	
 	protected Dimension layerSize() {
 		return new Dimension(x_dim, y_dim);
 	}
 
-	public BufferedImage renderedImage() {
+	public BufferedImage image() {
 		return image;
+	}
+	public Graphics draw(){
+		return draw;
+	}
+	public Graphics2D draw2D(){
+		return draw2D;
 	}
 
 	public AffineTransform transform() {
 		return transform;
 	}
-
-	public void draw(Graphics2D g) {
-		g.drawImage(image, transform, null);
+	public abstract void draw(Graphics2D g);
+	
+	public void setImage(BufferedImage im){
+		image = im;
+		draw = image.getGraphics();
+		draw2D = (Graphics2D) draw;
 	}
 
 	// Add image from file
@@ -114,5 +117,8 @@ public class Layer {
 		}
 		return;
 	}
+	
+	public abstract void undo();
+	public abstract void redo();
 
 }

@@ -22,7 +22,12 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
-public class Canvas extends JPanel implements MouseListener, MouseMotionListener, MouseWheelListener, KeyListener {
+import layers.Layer;
+import layers.LayerAnnotation;
+import layers.LayerRaster;
+import layers.LayerVector;
+
+public class Canvas extends JPanel implements MouseListener, MouseMotionListener, MouseWheelListener {
 	private static final long serialVersionUID = 1L;
 	public static int x_dim;
 	public static int y_dim;
@@ -35,15 +40,16 @@ public class Canvas extends JPanel implements MouseListener, MouseMotionListener
 	Layer active;
 	LayerAnnotation annotations;
 	AffineTransform at;
-	
-	//Tools
-	ToolRaster rastertools;
+
+	// Tools
+	Tools tools;
 
 	// Canvas Properties
 	private double magnification = 1;
 	private String name;
 
 	// Paint
+	@Override
 	public void paintComponent(Graphics g) {
 		super.paintComponent(g);
 		Graphics2D g2 = (Graphics2D) g;
@@ -60,18 +66,28 @@ public class Canvas extends JPanel implements MouseListener, MouseMotionListener
 
 	// Constructor
 	public Canvas(int x, int y) {
-
-		at = new AffineTransform();
-		setCanvasSize(x, y);
-		layers.add(new LayerRaster(x, y, at));
-		active = layers.get(0);
-		annotations = new LayerAnnotation(x, y, at);
+		x_dim = x;
+		y_dim = y;
 		addMouseListener(this);
 		addMouseMotionListener(this);
 		addMouseWheelListener(this);
-		addKeyListener(this);
+		at = new AffineTransform();
+		annotations = new LayerAnnotation(x, y, at);
+		addLayer("Raster");
+		addLayer("Vector");
+		tools = new Tools(annotations);
+		setActive(0);
+		setCanvasSize(x, y);
+		layers.get(0).setLayerColor(Color.WHITE);
 		centerCanvas();
-		rastertools = new ToolRaster(active,annotations);
+	}
+
+	private void addLayer(String t) {
+		if(t=="Vector")
+			layers.add(new LayerVector(x_dim,y_dim,at));
+		if(t=="Raster")
+			layers.add(new LayerRaster(x_dim,y_dim,at));
+		Main.arrangeLayerList();
 	}
 
 	// public set methods for canvas properties
@@ -81,6 +97,13 @@ public class Canvas extends JPanel implements MouseListener, MouseMotionListener
 			setCanvasMagnification(zoom);
 		} catch (RuntimeException e) {
 		}
+	}
+
+	public void addLayer() {
+		Object[] possibilities = { "Vector", "Raster" };
+		String s = (String) JOptionPane.showInputDialog(Main.frame, "What Type of Layer Would you Like to add?:\n",
+				"Select Origin", JOptionPane.PLAIN_MESSAGE, null, possibilities, "move");
+		addLayer(s);
 	}
 
 	public void setSize() {
@@ -102,6 +125,8 @@ public class Canvas extends JPanel implements MouseListener, MouseMotionListener
 		// change size of layers
 		for (Layer l : layers)
 			l.setLayerSize(x, y);
+		// change size of annotation layer
+		annotations.setLayerSize(x, y);
 	}
 
 	private void setCanvasLocation(int x, int y) {
@@ -133,11 +158,18 @@ public class Canvas extends JPanel implements MouseListener, MouseMotionListener
 	}
 
 	public void setCanvasBackground(Color c) {
-		rastertools.background = c;
+		tools.background = c;
 	}
 
 	public void setCanvasForeground(Color c) {
-		rastertools.foreground = c;
+		tools.foreground = c;
+	}
+
+	public void setActive(int i) {
+		if (i < layers.size()) {
+			active = layers.get(i);
+			tools.setTargetLayer(active);
+		}
 	}
 
 	// functional methods
@@ -161,18 +193,6 @@ public class Canvas extends JPanel implements MouseListener, MouseMotionListener
 		return at.transform(p, null);
 	}
 
-	public Point2D getAnnotationPoint(MouseEvent e) {
-		Point p = new Point(e.getX(), e.getY());
-		return getAnnotationPoint(p);
-	}
-
-	public Point2D getAnnotationPoint(Point2D e) {
-
-		return new Point((int) (e.getX() - active.getLayerBounds().getX()),
-				(int) (e.getY() - active.getLayerBounds().getY()));
-
-	}
-
 	public String getName() {
 		return name;
 	}
@@ -185,7 +205,7 @@ public class Canvas extends JPanel implements MouseListener, MouseMotionListener
 	@Override
 	public void mouseDragged(MouseEvent e) {
 		Point2D p = getCanvasPoint(e);
-		rastertools.mouseDragged(p,e);
+		tools.mouseDragged(p, e);
 	}
 
 	@Override
@@ -209,12 +229,12 @@ public class Canvas extends JPanel implements MouseListener, MouseMotionListener
 	@Override
 	public void mousePressed(MouseEvent e) {
 		Point2D p = getCanvasPoint(e);
-		rastertools.mouseDown(p, e);
+		tools.mouseDown(p, e);
 	}
 
 	@Override
 	public void mouseReleased(MouseEvent r) {
-		rastertools.mouseUp();
+		tools.mouseUp();
 
 	}
 
@@ -226,31 +246,11 @@ public class Canvas extends JPanel implements MouseListener, MouseMotionListener
 			adjustCanvasMagnification(-e.getPreciseWheelRotation() / 10);
 			Point2D pf = getFramePoint(pc);
 			shiftCanvasLocation(e.getX() - (int) pf.getX(), e.getY() - (int) pf.getY());
+		} else if ((e.getModifiers() & ActionEvent.SHIFT_MASK) == ActionEvent.SHIFT_MASK) {
+			shiftCanvasLocation(-10 * e.getWheelRotation(), 0);
+		} else {
+			shiftCanvasLocation(0, -10 * e.getWheelRotation());
 		}
-		else if ((e.getModifiers() & ActionEvent.SHIFT_MASK) ==ActionEvent.SHIFT_MASK) {
-			shiftCanvasLocation(-10*e.getWheelRotation(),0);
-		}
-		else {
-			shiftCanvasLocation(0,-10*e.getWheelRotation());
-		}
-
-	}
-
-	@Override
-	public void keyPressed(KeyEvent arg0) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void keyReleased(KeyEvent arg0) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void keyTyped(KeyEvent arg0) {
-		// TODO Auto-generated method stub
 
 	}
 

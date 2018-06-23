@@ -1,4 +1,4 @@
-package events;
+package interfaces;
 
 import java.awt.Color;
 import java.awt.Component;
@@ -73,7 +73,7 @@ public class AutoMenuBar extends JMenuBar implements ActionListener, ItemListene
 
 	}
 
-	AutoMenuBar(String[] names) {
+	public AutoMenuBar(String[] names) {
 		addTopMenus(names);
 	}
 

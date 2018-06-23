@@ -1,4 +1,4 @@
-package events;
+package interfaces;
 
 import java.awt.Color;
 import java.awt.Component;
@@ -26,7 +26,9 @@ import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
 
-public class WindowToolbar extends JDialog implements WindowListener, ActionListener {
+import events.Main;
+
+public class AutoToolbar extends JDialog implements WindowListener, ActionListener {
 
 	/**
 	 * 
@@ -38,9 +40,12 @@ public class WindowToolbar extends JDialog implements WindowListener, ActionList
 	ArrayList<cButton> buttons = new ArrayList<cButton>();
 
 	private CustomMouseListener cml = new CustomMouseListener();
+	
+	private JFrame parent;
 
 	// Constructor
-	public WindowToolbar(String n, int x, int y, int w, int h) {
+	public AutoToolbar(String n, int x, int y, int w, int h,JFrame p) {
+		parent = p;
 		name = n;
 		setPreferredSize(new Dimension(w, h));
 		setLayout(flowlayout);
@@ -56,13 +61,13 @@ public class WindowToolbar extends JDialog implements WindowListener, ActionList
 	}
 
 	public void setRelativeToParent(int x, int y) {
-		Point parent = Main.frame.getLocationOnScreen();
-		setLocation(parent.x + x, parent.y + y);
+		Point loc = parent.getLocationOnScreen();
+		setLocation(loc.x + x, loc.y + y);
 	}
 
 	// The main add_item method
-	public void addItem(String name, boolean hasSprite, Color c, int w, int h, boolean hasRightClickAction,
-			Consumer<Boolean> action, Consumer<Boolean> rightclick) {
+	public void addItem(String name, boolean hasSprite, boolean showText, Color c, int w, int h,
+			boolean hasRightClickAction, Consumer<Boolean> action, Consumer<Boolean> rightclick) {
 		cButton b = new cButton(name);
 		b.addActionListener(this);
 		if (hasRightClickAction) {
@@ -78,6 +83,8 @@ public class WindowToolbar extends JDialog implements WindowListener, ActionList
 			b.setBackground(c);
 		b.setPreferredSize(new Dimension(w, h));
 		add(b);
+		if (showText)
+			b.setText(name);
 		if (hasSprite)
 			b.setSprite();
 		buttons.add(b);
@@ -85,7 +92,7 @@ public class WindowToolbar extends JDialog implements WindowListener, ActionList
 	}
 
 	public void addItem(String name, Color c, int w, int h) {
-		addItem(name, false, c, w, h, false, (y) -> {
+		addItem(name, false, false, c, w, h, false, (y) -> {
 		}, (y) -> {
 		});
 	}
@@ -99,7 +106,7 @@ public class WindowToolbar extends JDialog implements WindowListener, ActionList
 	}
 
 	public void addItem(String name, boolean hasSprite, Color c, int w, int h) {
-		addItem(name, hasSprite, c, w, h, false, (y) -> {
+		addItem(name, hasSprite, false, c, w, h, false, (y) -> {
 		}, (y) -> {
 		});
 	}
@@ -124,6 +131,20 @@ public class WindowToolbar extends JDialog implements WindowListener, ActionList
 		for (String n : names) {
 			addItem(n, hasSprite, w, h);
 		}
+	}
+
+	public void removeItem(String name) {
+		// Get the Component named "name"
+		Component c = get(name);
+		//Remove it
+		buttons.remove(c);
+		this.remove(c);
+	}
+	
+	public void removeAll(){
+		for(cButton b : buttons)
+			this.remove(b);
+		buttons.clear();
 	}
 
 	// Set the right click action for an item
@@ -166,8 +187,8 @@ public class WindowToolbar extends JDialog implements WindowListener, ActionList
 		// Nothing found. Return null
 		return null;
 	}
-	
-	public Color getButtonColor(String name){
+
+	public Color getButtonColor(String name) {
 		Component c = get(name);
 		return ((cButton) c).getBackground();
 	}
